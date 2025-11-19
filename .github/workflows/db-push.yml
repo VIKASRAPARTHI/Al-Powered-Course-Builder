@@ -1,0 +1,25 @@
+name: Push Drizzle Schema
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  push-schema:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Push Drizzle schema
+        env:
+          DRIZZLE_DATABASE_URL: ${{ secrets.DRIZZLE_DATABASE_URL }}
+        run: |
+          npx drizzle-kit push --url "$DRIZZLE_DATABASE_URL" --schema ./schema/schema.ts --out ./drizzle

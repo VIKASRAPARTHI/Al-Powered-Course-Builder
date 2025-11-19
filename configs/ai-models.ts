@@ -1,18 +1,53 @@
-import {
-  GoogleGenerativeAI,
-  HarmCategory,
-  HarmBlockThreshold,
-} from "@google/generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { BaseEnvironment } from "./BaseEnvironment";
 
 const env = new BaseEnvironment();
-export const MODEL = "gemini-1.5-flash";
+
+// Preferred model can be overridden with env var `GEN_AI_MODEL`.
+// Try Gemini Pro first if available, then fall back to other supported models.
+const preferredFromEnv = process.env.GEN_AI_MODEL || process.env.GOOGLE_GEMENI_MODEL;
+const PREFERRED_MODELS = [
+  preferredFromEnv || "gemini-1.5-flash",
+  "gemini-1.5",
+  "gemini-1.5-flash",
+  "chat-bison",
+];
 
 const genAI = new GoogleGenerativeAI(env.GOOGLE_GEMENI_API_KEY);
 
-const model = genAI.getGenerativeModel({
-  model: MODEL,
-});
+// Attempt to list models for diagnostic purposes. This is wrapped in a
+// self-invoking async function and errors are caught so it won't break
+// startup if listing requires OAuth or is not available for the provided key.
+(async () => {
+  try {
+    if (typeof (genAI as any).listModels === 'function') {
+      // Some SDK builds expose listModels; call it for debugging
+      const models = await (genAI as any).listModels();
+      console.log('[ai-models] available models:', models);
+    }
+  } catch (e: any) {
+    console.warn('[ai-models] listModels failed (non-fatal):', e?.message ?? e);
+  }
+})();
+
+let model: any = null;
+let usedModelName: string | null = null;
+for (const candidate of PREFERRED_MODELS) {
+  try {
+    // Attempt to obtain a model client for this candidate
+    model = genAI.getGenerativeModel({ model: candidate as any });
+    usedModelName = candidate;
+    console.log('[ai-models] using model:', usedModelName);
+    break;
+  } catch (err: any) {
+    console.warn(`[ai-models] model ${candidate} unavailable:`, err?.message ?? err);
+    // try next candidate
+  }
+}
+
+if (!model) {
+  throw new Error('No available generative model found. Check your Google Generative AI API key and available models.');
+}
 
 const generationConfig = {
   temperature: 1,

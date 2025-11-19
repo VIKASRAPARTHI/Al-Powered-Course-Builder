@@ -31,13 +31,20 @@ const CreateCoursePage = () => {
     UserCourseListContext
   );
   const getUserCourses = async () => {
-    const res = await db
-      .select()
-      .from(CourseList)
-      .where(
-        eq(CourseList.createdBy, user?.primaryEmailAddress?.emailAddress ?? "")
-      );
-    setUserCourseList(res as CourseType[]);
+    try {
+      const email = user?.primaryEmailAddress?.emailAddress ?? "";
+      const resp = await fetch('/api/courses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const json = await resp.json();
+      const data = json?.data ?? [];
+      setUserCourseList(data as CourseType[]);
+    } catch (err) {
+      console.error('Failed to load user courses', err);
+      setUserCourseList([]);
+    }
   };
 
   const { user } = useUser();
@@ -77,13 +84,23 @@ const CreateCoursePage = () => {
     }
   };
 
+  // Fetch user courses when a user becomes available. Only fetch if we
+  // don't already have courses to avoid a fetch -> setState -> effect loop.
   useEffect(() => {
-    user && getUserCourses();
-    if (userCourseList.length > 5) {
-      router.replace("/dashboard/upgrade");
+    if (!user) return;
+    if (!userCourseList || userCourseList.length === 0) {
+      getUserCourses();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, userCourseList]);
+  }, [user]);
+
+  // React to changes in `userCourseList` for upgrade redirect. Keep this
+  // separate so fetching and redirect logic don't trigger each other.
+  useEffect(() => {
+    if (userCourseList && userCourseList.length > 5) {
+      router.replace("/dashboard/upgrade");
+    }
+  }, [userCourseList, router]);
 
   return (
     <div>
