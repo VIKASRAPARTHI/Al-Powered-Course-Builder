@@ -2,8 +2,6 @@
 
 AI Course Generator is an application built with Next.js that helps users create complete, structured courses using Google Generative AI. Users provide basic course details and the app generates course layouts and chapter content (optionally including YouTube video suggestions). The project uses Drizzle ORM with a PostgreSQL database (Neon), Clerk for auth, and Firebase for media storage.
 
---
-
 **Contents**
 
 - What this project does
@@ -16,7 +14,6 @@ AI Course Generator is an application built with Next.js that helps users create
 - Troubleshooting
 - Contributing
 
---
 
 ## What this project does
 
